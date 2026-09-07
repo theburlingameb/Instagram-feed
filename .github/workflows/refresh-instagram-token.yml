@@ -1,0 +1,34 @@
+name: Refresh Instagram token
+
+on:
+  schedule:
+    - cron: '0 6 * * *'   # once a day, 06:00 UTC -- Instagram won't allow more often than every 24h anyway
+  workflow_dispatch: {}
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Refresh token
+        id: refresh
+        env:
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+        run: |
+          OUTPUT=$(node refresh-token.js)
+          NEW_TOKEN=$(echo "$OUTPUT" | grep '^NEW_TOKEN=' | cut -d'=' -f2-)
+          echo "new_token=$NEW_TOKEN" >> "$GITHUB_OUTPUT"
+
+      - name: Persist refreshed token as a repo secret
+        # GITHUB_TOKEN can't update secrets on its own -- this needs a
+        # separate fine-grained PAT (scoped to this repo, "secrets: write"),
+        # saved as its own secret, e.g. SECRETS_ADMIN_PAT.
+        env:
+          GH_TOKEN: ${{ secrets.SECRETS_ADMIN_PAT }}
+        run: |
+          gh secret set IG_ACCESS_TOKEN --body "${{ steps.refresh.outputs.new_token }}"
