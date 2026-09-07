@@ -28,6 +28,17 @@ if (!ACCESS_TOKEN || !USER_ID) {
   process.exit(1);
 }
 
+async function fetchProfile(token) {
+  const fields = ['username', 'profile_picture_url', 'followers_count', 'media_count'].join(',');
+  const url = `https://graph.instagram.com/me?fields=${fields}&access_token=${encodeURIComponent(token)}`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Profile fetch failed (${res.status}): ${body}`);
+  }
+  return res.json();
+}
+
 async function fetchMedia(token, userId, limit) {
   const fields = [
     'id',
@@ -50,11 +61,20 @@ async function fetchMedia(token, userId, limit) {
 }
 
 async function main() {
+  console.error('Fetching profile...');
+  const profile = await fetchProfile(ACCESS_TOKEN);
+
   console.error('Fetching recent media...');
   const media = await fetchMedia(ACCESS_TOKEN, USER_ID, MEDIA_LIMIT);
 
   const feed = {
     updated_at: new Date().toISOString(),
+    profile: {
+      username: profile.username,
+      profile_picture_url: profile.profile_picture_url,
+      followers_count: profile.followers_count,
+      media_count: profile.media_count
+    },
     items: media.map(item => ({
       id: item.id,
       caption: item.caption || '',
