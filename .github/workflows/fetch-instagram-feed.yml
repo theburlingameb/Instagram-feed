@@ -2,7 +2,7 @@ name: Fetch Instagram feed
 
 on:
   schedule:
-      - cron: '21,51 * * * *'   # every 0:00 and 0:10
+      - cron: '1,10 * * * *'   # every 0:00 and 0:10
   workflow_dispatch: {}    # lets you trigger it by hand from the Actions tab
 
 permissions:
